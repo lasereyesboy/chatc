@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ETH / USDT Sender</title>
+</head>
+<body>
+  <h2>🔗 Send ETH / USDT</h2>
+  
+  <button onclick="connect()">1. Connect MetaMask</button><br><br>
+
+  <label>Recipient Address:</label><br>
+  <input type="text" id="to" size="60" placeholder="0x..."><br><br>
+
+  <label>Amount:</label><br>
+  <input type="text" id="amount" placeholder="e.g. 0.01"><br><br>
+
+  <button onclick="sendETH()">2. Send ETH</button>
+  <button onclick="sendUSDT()">3. Send USDT</button>
+
+  <p id="status">🟡 Not connected</p>
+
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script>
+    let web3;
+    let account;
+
+    const usdtAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // Ethereum Mainnet USDT
+    const usdtAbi = [
+      {
+        "constant": false,
+        "inputs": [
+          { "name": "_to", "type": "address" },
+          { "name": "_value", "type": "uint256" }
+        ],
+        "name": "transfer",
+        "outputs": [{ "name": "", "type": "bool" }],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [{ "name": "", "type": "uint8" }],
+        "type": "function"
+      }
+    ];
+
+    async function connect() {
+      if (window.ethereum) {
+        try {
+          await window.ethereum.request({ method: "eth_requestAccounts" });
+          web3 = new Web3(window.ethereum);
+          const accounts = await web3.eth.getAccounts();
+          account = accounts[0];
+          document.getElementById("status").innerText = "✅ Connected: " + account;
+        } catch (err) {
+          document.getElementById("status").innerText = "❌ Connection failed: " + err.message;
+        }
+      } else {
+        alert("❌ MetaMask not found. Please install MetaMask!");
+      }
+    }
+
+    async function sendETH() {
+      const to = document.getElementById("to").value;
+      const amt = document.getElementById("amount").value;
+      if (!to || !amt || !account) return alert("Fill all fields");
+
+      try {
+        const txHash = await ethereum.request({
+          method: "eth_sendTransaction",
+          params: [{
+            from: account,
+            to: to,
+            value: web3.utils.toHex(web3.utils.toWei(amt, "ether")),
+          }]
+        });
+        document.getElementById("status").innerText = "✅ ETH sent! TX: " + txHash;
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ ETH send failed: " + err.message;
+      }
+    }
+
+    async function sendUSDT() {
+      const to = document.getElementById("to").value;
+      const amt = document.getElementById("amount").value;
+      if (!to || !amt || !account) return alert("Fill all fields");
+
+      const usdt = new web3.eth.Contract(usdtAbi, usdtAddress);
+      const decimals = await usdt.methods.decimals().call();
+      const value = web3.utils.toBN(amt * 10 ** decimals);
+
+      try {
+        const tx = await usdt.methods.transfer(to, value).send({ from: account });
+        document.getElementById("status").innerText = "✅ USDT sent! TX: " + tx.transactionHash;
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ USDT send failed: " + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
